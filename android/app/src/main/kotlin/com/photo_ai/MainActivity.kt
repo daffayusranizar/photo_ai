@@ -1,4 +1,4 @@
-package com.example.photo_ai
+package com.photo_ai
 
 import io.flutter.embedding.android.FlutterActivity
 
