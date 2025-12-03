@@ -29,10 +29,7 @@ class PhotoRepositoryImpl implements PhotoRepository {
   }
 
   @override
-  Stream<List<Photo>> getPhotos() {
-    final userId = firebaseAuth.currentUser?.uid;
-    if (userId == null) return const Stream.empty();
-    
+  Stream<List<Photo>> getPhotos(String userId) {
     return remoteDataSource.getPhotos(userId);
   }
 }

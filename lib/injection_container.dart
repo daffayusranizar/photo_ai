@@ -51,5 +51,5 @@ Future<void> init() async {
   // External
   sl.registerLazySingleton(() => FirebaseAuth.instance);
   sl.registerLazySingleton(() => FirebaseFirestore.instance);
-  sl.registerLazySingleton(() => FirebaseStorage.instance);
+  sl.registerLazySingleton(() => FirebaseStorage.instanceFor(bucket: 'gs://photo-ai-16051.firebasestorage.app'));
 }

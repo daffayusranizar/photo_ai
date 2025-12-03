@@ -6,7 +6,7 @@ class GetPhotos {
 
   GetPhotos(this.repository);
 
-  Stream<List<Photo>> call() {
-    return repository.getPhotos();
+  Stream<List<Photo>> call(String userId) {
+    return repository.getPhotos(userId);
   }
 }
