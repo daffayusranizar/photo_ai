@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../widgets/private_image.dart';
 
 import '../../../../injection_container.dart';
 import '../../domain/usecases/upload_photo.dart';
@@ -29,7 +30,7 @@ class _RemixPageState extends State<RemixPage> {
   bool _isGenerating = false;
   bool _isLoadingImage = false;
   bool _generationComplete = false;
-  List<String> _generatedUrls = [];
+  List<String> _generatedPaths = [];
   final ImagePicker _picker = ImagePicker();
   StreamSubscription? _generationSubscription;
   String? _currentPhotoId;
@@ -141,7 +142,7 @@ class _RemixPageState extends State<RemixPage> {
     _generationSubscription?.cancel();
     if (mounted) {
       setState(() {
-        _generatedUrls.clear();
+        _generatedPaths.clear();
         _generationComplete = false;
         _currentPhotoId = null;
         _selectedPreviewIndex = 0;
@@ -166,7 +167,7 @@ class _RemixPageState extends State<RemixPage> {
 
     setState(() {
       _isGenerating = true;
-      _generatedUrls.clear();
+      _generatedPaths.clear();
       _generationComplete = false;
       _selectedPreviewIndex = 0;
     });
@@ -263,18 +264,17 @@ class _RemixPageState extends State<RemixPage> {
       if (snapshot.exists) {
         final data = snapshot.data();
 
-        if (data != null && data['generatedUrls'] != null) {
-          final urls = List<String>.from(data['generatedUrls'] as List);
+        if (data != null && data['generatedPaths'] != null) {
+          final paths = List<String>.from(data['generatedPaths'] as List);
 
-          if (urls.isNotEmpty) {
+          if (paths.isNotEmpty) {
             if (mounted) {
               setState(() {
-                _generatedUrls = urls;
+                _generatedPaths = paths;
                 _isGenerating = false;
                 _generationComplete = true;
                 _selectedPreviewIndex = 0;
               });
-              _precacheGeneratedImages(urls);
             }
 
             _generationSubscription?.cancel();
@@ -289,12 +289,6 @@ class _RemixPageState extends State<RemixPage> {
         );
       }
     });
-  }
-
-  void _precacheGeneratedImages(List<String> urls) {
-    for (final url in urls) {
-      precacheImage(NetworkImage(url), context);
-    }
   }
 
   void _handleButtonPress() {
@@ -402,7 +396,7 @@ class _RemixPageState extends State<RemixPage> {
   }
 
   Widget _buildPreviewSection() {
-    final bool hasResults = _generatedUrls.isNotEmpty;
+    final bool hasResults = _generatedPaths.isNotEmpty;
     final bool hasSelfie = _imageFile != null;
 
     Widget child;
@@ -436,12 +430,12 @@ class _RemixPageState extends State<RemixPage> {
         ],
       );
     } else if (hasResults) {
-      final imageUrl = _generatedUrls[
-          _selectedPreviewIndex.clamp(0, _generatedUrls.length - 1)];
+      final imagePath = _generatedPaths[
+          _selectedPreviewIndex.clamp(0, _generatedPaths.length - 1)];
       child = ClipRRect(
         borderRadius: BorderRadius.circular(24),
-        child: CachedNetworkImage(
-          imageUrl: imageUrl,
+        child: PrivateImage(
+          storagePath: imagePath,
           fit: BoxFit.cover,
           width: double.infinity,
           height: double.infinity,
@@ -523,7 +517,7 @@ class _RemixPageState extends State<RemixPage> {
   }
 
   Widget _buildThumbnailStrip() {
-    if (_generatedUrls.isEmpty) {
+    if (_generatedPaths.isEmpty) {
       return const SizedBox.shrink();
     }
 
@@ -531,7 +525,7 @@ class _RemixPageState extends State<RemixPage> {
       height: 72,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        itemCount: _generatedUrls.length,
+        itemCount: _generatedPaths.length,
         separatorBuilder: (_, __) => const SizedBox(width: 10),
         itemBuilder: (context, index) {
           final isSelected = index == _selectedPreviewIndex;
@@ -553,8 +547,8 @@ class _RemixPageState extends State<RemixPage> {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(16),
-                child: CachedNetworkImage(
-                  imageUrl: _generatedUrls[index],
+                child: PrivateImage(
+                  storagePath: _generatedPaths[index],
                   fit: BoxFit.cover,
                 ),
               ),

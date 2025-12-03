@@ -2,8 +2,8 @@ import 'package:equatable/equatable.dart';
 
 class Photo extends Equatable {
   final String id;
-  final String originalUrl;
-  final List<String> generatedUrls; // Changed from single URL to array for 4 variants
+  final String originalPath;
+  final List<String> generatedPaths; // Changed from single URL to array for 4 variants
   final String status; // 'pending', 'completed', 'failed'
   final DateTime createdAt;
   
@@ -14,8 +14,8 @@ class Photo extends Equatable {
 
   const Photo({
     required this.id,
-    required this.originalUrl,
-    this.generatedUrls = const [],
+    required this.originalPath,
+    this.generatedPaths = const [],
     required this.status,
     required this.createdAt,
     this.place,
@@ -24,5 +24,5 @@ class Photo extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, originalUrl, generatedUrls, status, createdAt, place, shotType, timeOfDay];
+  List<Object?> get props => [id, originalPath, generatedPaths, status, createdAt, place, shotType, timeOfDay];
 }

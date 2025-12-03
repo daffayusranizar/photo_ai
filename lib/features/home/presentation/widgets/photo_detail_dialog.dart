@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'private_image.dart';
 import 'package:intl/intl.dart';
 import '../../domain/entities/photo.dart';
 
@@ -62,8 +63,8 @@ class PhotoDetailDialog extends StatelessWidget {
                         children: [
                           ClipRRect(
                             borderRadius: BorderRadius.circular(20),
-                            child: CachedNetworkImage(
-                              imageUrl: photo.originalUrl,
+                            child: PrivateImage(
+                              storagePath: photo.originalPath,
                               width: double.infinity,
                               height: 240,
                               fit: BoxFit.cover,
@@ -154,7 +155,7 @@ class PhotoDetailDialog extends StatelessWidget {
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            '${photo.generatedUrls.length} Generated Variant${photo.generatedUrls.length != 1 ? 's' : ''}',
+                            '${photo.generatedPaths.length} Generated Variant${photo.generatedPaths.length != 1 ? 's' : ''}',
                             style: const TextStyle(
                               color: Colors.black87,
                               fontSize: 14,
@@ -164,7 +165,7 @@ class PhotoDetailDialog extends StatelessWidget {
                         ],
                       ),
 
-                      if (photo.generatedUrls.isNotEmpty) ...[
+                      if (photo.generatedPaths.isNotEmpty) ...[
                         const SizedBox(height: 24),
 
                         // Section header
@@ -190,12 +191,12 @@ class PhotoDetailDialog extends StatelessWidget {
                             mainAxisSpacing: 12,
                             childAspectRatio: 0.75,
                           ),
-                          itemCount: photo.generatedUrls.length,
+                          itemCount: photo.generatedPaths.length,
                           itemBuilder: (context, index) {
                             return ClipRRect(
                               borderRadius: BorderRadius.circular(16),
-                              child: CachedNetworkImage(
-                                imageUrl: photo.generatedUrls[index],
+                              child: PrivateImage(
+                                storagePath: photo.generatedPaths[index],
                                 fit: BoxFit.cover,
                                 placeholder: (context, url) => Container(
                                   color: Colors.grey[200],

@@ -27,14 +27,21 @@ exports.generateTravelPhoto = functions.firestore
     try {
       console.log(`🔄 Processing photo ${photoId} for user ${userId}`);
 
-      const imageUrl = data.originalUrl;
-      if (!imageUrl) {
-        throw new Error("No originalUrl found in document");
-      }
+      const bucket = admin.storage().bucket();
+      let referenceImageBase64;
 
-      // STEP 1: Convert original image to base64 for reference
-      console.log("📸 Converting reference image...");
-      const referenceImageBase64 = await imageUrlToBase64(imageUrl);
+      // STEP 1: Get original image
+      if (data.originalPath) {
+        console.log(`📸 Downloading original image from path: ${data.originalPath}`);
+        const [fileBuffer] = await bucket.file(data.originalPath).download();
+        referenceImageBase64 = fileBuffer.toString('base64');
+      } else if (data.originalUrl) {
+        // Fallback for older documents or if path not provided
+        console.log("📸 Fetching original image from URL...");
+        referenceImageBase64 = await imageUrlToBase64(data.originalUrl);
+      } else {
+        throw new Error("No originalPath or originalUrl found in document");
+      }
 
       // STEP 2: Analyze person appearance with Gemini (improved prompt)
       console.log("👁️  Analyzing person with Gemini...");
@@ -159,8 +166,7 @@ The person [1] should be the clear main subject, naturally integrated into the s
       console.log(`✅ Generated ${imagenData.predictions.length} variants`);
 
       // STEP 6: Upload all 4 variant images to Storage
-      const bucket = admin.storage().bucket();
-      const generatedUrls = [];
+      const generatedPaths = [];
 
       for (let i = 0; i < imagenData.predictions.length; i++) {
         const prediction = imagenData.predictions[i];
@@ -177,32 +183,29 @@ The person [1] should be the clear main subject, naturally integrated into the s
 
         console.log(`📤 Uploading variant ${i + 1}/${imagenData.predictions.length}...`);
         await file.save(imageBuffer, { metadata: { contentType: "image/png" } });
-        await file.makePublic();
+        // REMOVED: await file.makePublic(); - Keeping it private!
 
-        const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
-        generatedUrls.push(publicUrl);
-        console.log(`✅ Variant ${i + 1} uploaded (${imageBuffer.length} bytes)`);
+        generatedPaths.push(fileName);
+        console.log(`✅ Variant ${i + 1} uploaded to ${fileName}`);
       }
 
-      if (generatedUrls.length === 0) {
+      if (generatedPaths.length === 0) {
         throw new Error("No valid images were generated");
       }
 
-      // STEP 7: Update Firestore with all variant URLs
+      // STEP 7: Update Firestore with all variant paths
       await snap.ref.update({
         status: "completed",
-        generatedUrls: generatedUrls,
+        generatedPaths: generatedPaths, // Storing paths instead of URLs
         personDescription,
         place: place,
         shotType: shotType,
         timeOfDay: timeOfDay,
         fullPrompt: generatePrompt,
-        originalImageUrl: imageUrl,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
 
-      console.log(`🎉 SUCCESS: Generated ${generatedUrls.length} variants`);
-      console.log("URLs:", generatedUrls);
+      console.log(`🎉 SUCCESS: Generated ${generatedPaths.length} variants`);
 
     } catch (error) {
       console.error("❌ ERROR:", error.message);

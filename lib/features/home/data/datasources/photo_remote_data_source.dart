@@ -18,16 +18,17 @@ class PhotoRemoteDataSourceImpl implements PhotoRemoteDataSource {
   @override
   Future<void> uploadPhoto(File image, String userId, {String? place, String? shotType, String? timeOfDay}) async {
     final photoId = const Uuid().v4();
-    final ref = storage.ref().child('users/$userId/uploads/$photoId.jpg');
+    final storagePath = 'users/$userId/uploads/$photoId.jpg';
+    final ref = storage.ref().child(storagePath);
     
     // 1. Upload to Storage
     await ref.putFile(image);
-    final downloadUrl = await ref.getDownloadURL();
+    // No need for getDownloadURL() anymore
 
     // 2. Save metadata to Firestore (triggers Cloud Function)
     final data = {
       'id': photoId,
-      'originalUrl': downloadUrl,
+      'originalPath': storagePath, // Save path instead of URL
       'status': 'pending',
       'createdAt': FieldValue.serverTimestamp(),
     };
@@ -53,8 +54,8 @@ class PhotoRemoteDataSourceImpl implements PhotoRemoteDataSource {
         final data = doc.data();
         return Photo(
           id: data['id'],
-          originalUrl: data['originalUrl'],
-          generatedUrls: (data['generatedUrls'] as List?)?.map((e) => e.toString()).toList() ?? [],
+          originalPath: data['originalPath'] ?? '', // Fallback or handle migration
+          generatedPaths: (data['generatedPaths'] as List?)?.map((e) => e.toString()).toList() ?? [],
           status: data['status'] ?? 'pending',
           createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
           place: data['place'],

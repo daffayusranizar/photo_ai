@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'private_image.dart';
 import '../../domain/entities/photo.dart';
 
 class PhotoGridItem extends StatelessWidget {
@@ -11,9 +12,9 @@ class PhotoGridItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final isCompleted = photo.status == 'completed';
     final isFailed = photo.status == 'failed';
-    final displayUrl = isCompleted && photo.generatedUrls.isNotEmpty 
-        ? photo.generatedUrls[0] 
-        : photo.originalUrl;
+    final displayPath = isCompleted && photo.generatedPaths.isNotEmpty 
+        ? photo.generatedPaths[0] 
+        : photo.originalPath;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
@@ -21,9 +22,9 @@ class PhotoGridItem extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           // Main Image
-          if (displayUrl != null)
-            CachedNetworkImage(
-              imageUrl: displayUrl!,
+          if (displayPath.isNotEmpty)
+            PrivateImage(
+              storagePath: displayPath,
               fit: BoxFit.cover,
               placeholder: (context, url) => Container(color: Colors.grey[200]),
               errorWidget: (context, url, error) => const Icon(Icons.error),
