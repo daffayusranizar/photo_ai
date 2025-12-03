@@ -1,15 +1,15 @@
 import 'dart:io';
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../../../../injection_container.dart';
-import '../../domain/entities/photo.dart';
-import '../../domain/usecases/upload_photo.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:cached_network_image/cached_network_image.dart';  // ADD THIS PACKAGE
-import 'history_page.dart';
-import 'dart:async';
+import 'package:cached_network_image/cached_network_image.dart';
 
+import '../../../../injection_container.dart';
+import '../../domain/usecases/upload_photo.dart';
+import 'history_page.dart';
 
 class RemixPage extends StatefulWidget {
   final File? imageFile;
@@ -20,30 +20,42 @@ class RemixPage extends StatefulWidget {
   State<RemixPage> createState() => _RemixPageState();
 }
 
-
 class _RemixPageState extends State<RemixPage> {
   File? _imageFile;
   final TextEditingController _placeController = TextEditingController();
   String _selectedShotType = 'Fullbody';
   String _selectedTime = 'Sunset';
-  
+
   bool _isGenerating = false;
   bool _isLoadingImage = false;
   bool _generationComplete = false;
   List<String> _generatedUrls = [];
-  Set<int> _selectedVariants = {};
   final ImagePicker _picker = ImagePicker();
   StreamSubscription? _generationSubscription;
   String? _currentPhotoId;
 
-  static const List<String> _shotTypes = ['Fullbody', 'Half', 'Close-up', 'Landscape'];
-  static const List<String> _times = ['Morning', 'Sunrise', 'Noon', 'Afternoon', 'Sunset', 'Night'];
+  int _selectedPreviewIndex = 0;
+
+  static const List<String> _shotTypes = [
+    'Fullbody',
+    'Half',
+    'Close-up',
+    'Landscape',
+  ];
+  static const List<String> _times = [
+    'Morning',
+    'Sunrise',
+    'Noon',
+    'Afternoon',
+    'Sunset',
+    'Night',
+  ];
 
   @override
   void initState() {
     super.initState();
     _imageFile = widget.imageFile;
-    _placeController.text = 'Jam Gadang, Indonesia';
+    _placeController.text = '';
   }
 
   Future<void> _pickImage(ImageSource source) async {
@@ -54,26 +66,27 @@ class _RemixPageState extends State<RemixPage> {
         maxHeight: 600,
         imageQuality: 70,
       );
-      
+
       if (image == null) return;
-      
+
       setState(() => _isLoadingImage = true);
-      
       await Future.delayed(const Duration(milliseconds: 100));
-      
+
       final file = File(image.path);
       final fileSize = await file.length();
-      
+
       if (fileSize > 10 * 1024 * 1024) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Image too large. Please select a smaller image.')),
+            const SnackBar(
+              content: Text('Image too large. Please select a smaller image.'),
+            ),
           );
           setState(() => _isLoadingImage = false);
         }
         return;
       }
-      
+
       if (mounted) {
         setState(() {
           _imageFile = file;
@@ -94,7 +107,7 @@ class _RemixPageState extends State<RemixPage> {
   void _showImageSourceSelection() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF1A1F2E),
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -103,16 +116,16 @@ class _RemixPageState extends State<RemixPage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.camera_alt, color: Colors.white),
-              title: const Text('Camera', style: TextStyle(color: Colors.white)),
+              leading: const Icon(Icons.camera_alt, color: Colors.black87),
+              title: const Text('Camera'),
               onTap: () {
                 Navigator.pop(context);
                 _pickImage(ImageSource.camera);
               },
             ),
             ListTile(
-              leading: const Icon(Icons.photo_library, color: Colors.white),
-              title: const Text('Gallery', style: TextStyle(color: Colors.white)),
+              leading: const Icon(Icons.photo_library, color: Colors.black87),
+              title: const Text('Gallery'),
               onTap: () {
                 Navigator.pop(context);
                 _pickImage(ImageSource.gallery);
@@ -129,9 +142,9 @@ class _RemixPageState extends State<RemixPage> {
     if (mounted) {
       setState(() {
         _generatedUrls.clear();
-        _selectedVariants.clear();
         _generationComplete = false;
         _currentPhotoId = null;
+        _selectedPreviewIndex = 0;
       });
     }
   }
@@ -154,13 +167,13 @@ class _RemixPageState extends State<RemixPage> {
     setState(() {
       _isGenerating = true;
       _generatedUrls.clear();
-      _selectedVariants.clear();
       _generationComplete = false;
+      _selectedPreviewIndex = 0;
     });
 
     try {
       final uploadUseCase = sl<UploadPhoto>();
-      
+
       final result = await uploadUseCase(
         _imageFile!,
         place: _placeController.text.trim(),
@@ -185,7 +198,7 @@ class _RemixPageState extends State<RemixPage> {
             if (user == null) {
               throw Exception('User not authenticated');
             }
-            
+
             final snapshot = await FirebaseFirestore.instance
                 .collection('users')
                 .doc(user.uid)
@@ -193,20 +206,22 @@ class _RemixPageState extends State<RemixPage> {
                 .orderBy('createdAt', descending: true)
                 .limit(1)
                 .get();
-            
+
             if (snapshot.docs.isEmpty) {
               throw Exception('Photo document not found');
             }
-            
+
             final photoId = snapshot.docs.first.id;
-            
+
             if (mounted) {
               _currentPhotoId = photoId;
               _listenForGenerationResults(photoId);
-              
+
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('Generating 4 variants... This may take 30-60 seconds'),
+                  content: Text(
+                    'Generating 4 variants... This may take 30-60 seconds',
+                  ),
                   duration: Duration(seconds: 3),
                 ),
               );
@@ -247,22 +262,21 @@ class _RemixPageState extends State<RemixPage> {
 
       if (snapshot.exists) {
         final data = snapshot.data();
-        
+
         if (data != null && data['generatedUrls'] != null) {
           final urls = List<String>.from(data['generatedUrls'] as List);
-          
-          if (urls.isNotEmpty && urls.length >= 3) {
+
+          if (urls.isNotEmpty) {
             if (mounted) {
               setState(() {
                 _generatedUrls = urls;
                 _isGenerating = false;
                 _generationComplete = true;
+                _selectedPreviewIndex = 0;
               });
-              
-              // Precache images for faster display
               _precacheGeneratedImages(urls);
             }
-            
+
             _generationSubscription?.cancel();
           }
         }
@@ -277,7 +291,6 @@ class _RemixPageState extends State<RemixPage> {
     });
   }
 
-  // NEW: Precache images for instant display
   void _precacheGeneratedImages(List<String> urls) {
     for (final url in urls) {
       precacheImage(NetworkImage(url), context);
@@ -287,9 +300,8 @@ class _RemixPageState extends State<RemixPage> {
   void _handleButtonPress() {
     if (_generationComplete) {
       _resetGenerationData();
-    } else {
-      _generateScenes();
     }
+    _generateScenes();
   }
 
   @override
@@ -302,121 +314,284 @@ class _RemixPageState extends State<RemixPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1F2E),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF1A1F2E),
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        title: const Text('Remix', 
-          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600)),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.history_outlined, color: Colors.white70, size: 22),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const HistoryPage()),
-              );
-            },
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 20),
-              Center(child: _buildImagePreview()),
-              const SizedBox(height: 20),
-              _buildLocationDisplay(),
-              const SizedBox(height: 16),
-              _buildOptionsRow(),
-              const SizedBox(height: 28),
-              
-              if (_generatedUrls.isNotEmpty || _isGenerating)
-                _buildResultsSection(),
-              
-              const SizedBox(height: 100),
-            ],
-          ),
+      backgroundColor: Colors.grey[100],
+      resizeToAvoidBottomInset: true, // Important for keyboard handling
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+              child: _buildHeader(),
+            ),
+            const SizedBox(height: 16),
+
+            // Preview section that fills available space
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  children: [
+                    Flexible(
+                      child: _buildPreviewSection(),
+                    ),
+                    const SizedBox(height: 14),
+                    _buildThumbnailStrip(),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+            ),
+
+            // Inputs stick above keyboard
+            Container(
+              color: Colors.grey[100],
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                children: [
+                  _buildLocationDisplay(),
+                  const SizedBox(height: 10),
+                  _buildOptionsRow(),
+                  const SizedBox(height: 12),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
       bottomNavigationBar: _buildBottomButton(),
     );
   }
 
-  Widget _buildImagePreview() {
+  Widget _buildHeader() {
+    return Row(
+      children: [
+        const Text(
+          'Remix',
+          style: TextStyle(
+            color: Colors.black87,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const Spacer(),
+        TextButton.icon(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const HistoryPage()),
+            );
+          },
+          icon: const Icon(Icons.history, color: Colors.black54, size: 20),
+          label: const Text(
+            'History',
+            style: TextStyle(
+              color: Colors.black54,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPreviewSection() {
+    final bool hasResults = _generatedUrls.isNotEmpty;
+    final bool hasSelfie = _imageFile != null;
+
+    Widget child;
+
+    if (_isGenerating) {
+      child = Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: const [
+          SizedBox(
+            width: 32,
+            height: 32,
+            child: CircularProgressIndicator(
+              strokeWidth: 3,
+              color: Color(0xFF2667FF),
+            ),
+          ),
+          SizedBox(height: 12),
+          Text(
+            'Your remix will appear here',
+            style: TextStyle(
+              color: Colors.black87,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          SizedBox(height: 4),
+          Text(
+            'Generating new variants...',
+            style: TextStyle(color: Colors.black45, fontSize: 12),
+          ),
+        ],
+      );
+    } else if (hasResults) {
+      final imageUrl = _generatedUrls[
+          _selectedPreviewIndex.clamp(0, _generatedUrls.length - 1)];
+      child = ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: CachedNetworkImage(
+          imageUrl: imageUrl,
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: double.infinity,
+        ),
+      );
+    } else if (hasSelfie) {
+      child = ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Image.file(
+          _imageFile!,
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: double.infinity,
+        ),
+      );
+    } else {
+      child = Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: const [
+          Icon(Icons.auto_awesome, size: 40, color: Color(0xFF2667FF)),
+          SizedBox(height: 12),
+          Text(
+            'Your remixes appear here',
+            style: TextStyle(
+              color: Colors.black87,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          SizedBox(height: 4),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              'Add a selfie and set your preferences below to start generating new variants.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.black45, fontSize: 12, height: 1.4),
+            ),
+          ),
+        ],
+      );
+    }
+
     return GestureDetector(
       onTap: _isLoadingImage ? null : _showImageSourceSelection,
       child: Container(
-        width: 140,
-        height: 160,
-        decoration: BoxDecoration(
-          color: const Color(0xFF252A38),
-          borderRadius: BorderRadius.circular(12),
+        width: double.infinity,
+        constraints: const BoxConstraints(
+          minHeight: 280, // Minimum height to prevent card from being too small
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.all(16),
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 200),
           child: _isLoadingImage
               ? const Center(
                   child: SizedBox(
-                    width: 30,
-                    height: 30,
+                    width: 32,
+                    height: 32,
                     child: CircularProgressIndicator(
-                      color: Colors.blue,
                       strokeWidth: 3,
+                      color: Color(0xFF2667FF),
                     ),
                   ),
                 )
-              : _imageFile != null
-                  ? Image.file(
-                      _imageFile!,
-                      fit: BoxFit.cover,
-                      cacheWidth: 280,
-                      cacheHeight: 320,
-                      gaplessPlayback: true,
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Center(
-                          child: Icon(Icons.error_outline, color: Colors.red),
-                        );
-                      },
-                    )
-                  : const Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.add_a_photo_outlined, color: Colors.blue, size: 36),
-                        SizedBox(height: 8),
-                        Text('Upload Selfie', 
-                          style: TextStyle(color: Colors.blue, fontSize: 13)),
-                      ],
-                    ),
+              : child,
         ),
+      ),
+    );
+  }
+
+  Widget _buildThumbnailStrip() {
+    if (_generatedUrls.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return SizedBox(
+      height: 72,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: _generatedUrls.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        itemBuilder: (context, index) {
+          final isSelected = index == _selectedPreviewIndex;
+          return GestureDetector(
+            onTap: () {
+              setState(() {
+                _selectedPreviewIndex = index;
+              });
+            },
+            child: Container(
+              width: 72,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color:
+                      isSelected ? const Color(0xFF2667FF) : Colors.transparent,
+                  width: 2,
+                ),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: CachedNetworkImage(
+                  imageUrl: _generatedUrls[index],
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
 
   Widget _buildLocationDisplay() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFF252A38),
-        borderRadius: BorderRadius.circular(10),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         children: [
-          const Icon(Icons.location_on_outlined, color: Colors.white54, size: 20),
+          const Icon(Icons.location_on_outlined,
+              color: Colors.black54, size: 20),
           const SizedBox(width: 10),
           Expanded(
             child: TextField(
               controller: _placeController,
-              style: const TextStyle(color: Colors.white, fontSize: 14),
+              style: const TextStyle(color: Colors.black87, fontSize: 14),
               decoration: const InputDecoration(
                 border: InputBorder.none,
-                hintText: 'Enter location',
-                hintStyle: TextStyle(color: Colors.white38, fontSize: 14),
+                hintText: 'Place',
+                hintStyle: TextStyle(color: Colors.black38, fontSize: 14),
                 isDense: true,
                 contentPadding: EdgeInsets.zero,
               ),
@@ -430,205 +605,100 @@ class _RemixPageState extends State<RemixPage> {
   Widget _buildOptionsRow() {
     return Row(
       children: [
-        Expanded(child: _buildDropdown(_selectedShotType, _shotTypes, (v) {
-          setState(() => _selectedShotType = v!);
-        })),
+        Expanded(
+          child: _buildDropdown(
+            _selectedShotType,
+            _shotTypes,
+            (v) => setState(() => _selectedShotType = v!),
+          ),
+        ),
         const SizedBox(width: 12),
-        Expanded(child: _buildDropdown(_selectedTime, _times, (v) {
-          setState(() => _selectedTime = v!);
-        })),
+        Expanded(
+          child: _buildDropdown(
+            _selectedTime,
+            _times,
+            (v) => setState(() => _selectedTime = v!),
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildDropdown(String value, List<String> items, ValueChanged<String?> onChanged) {
+  Widget _buildDropdown(
+    String value,
+    List<String> items,
+    ValueChanged<String?> onChanged,
+  ) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
       decoration: BoxDecoration(
-        color: const Color(0xFF252A38),
-        borderRadius: BorderRadius.circular(10),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: DropdownButton<String>(
         value: value,
         isExpanded: true,
-        dropdownColor: const Color(0xFF252A38),
+        elevation: 2,
+        dropdownColor: Colors.white,
         underline: const SizedBox(),
-        icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white54, size: 20),
-        style: const TextStyle(color: Colors.white, fontSize: 14),
-        items: items.map((item) {
-          return DropdownMenuItem(
-            value: item,
-            child: Text(item),
-          );
-        }).toList(),
+        icon: const Icon(Icons.keyboard_arrow_down,
+            color: Colors.black45, size: 20),
+        style: const TextStyle(color: Colors.black87, fontSize: 14),
+        items: items
+            .map(
+              (item) => DropdownMenuItem(
+                value: item,
+                child: Text(item),
+              ),
+            )
+            .toList(),
         onChanged: onChanged,
-      ),
-    );
-  }
-
-  Widget _buildResultsSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          _isGenerating 
-              ? 'Generating AI variants...'
-              : 'Here are 4 AI-generated variants. Select one or more to save:',
-          style: const TextStyle(color: Colors.white60, fontSize: 13, height: 1.4),
-        ),
-        const SizedBox(height: 16),
-        
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            childAspectRatio: 0.72,
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
-          ),
-          itemCount: _isGenerating ? 4 : _generatedUrls.length,
-          itemBuilder: (context, index) {
-            if (_isGenerating) {
-              return _buildLoadingPlaceholder();
-            }
-            return _buildVariantItem(index);
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildLoadingPlaceholder() {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF252A38),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: const Center(
-        child: CircularProgressIndicator(
-          color: Colors.blue,
-          strokeWidth: 2.5,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildVariantItem(int index) {
-    final isSelected = _selectedVariants.contains(index);
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          if (isSelected) {
-            _selectedVariants.remove(index);
-          } else {
-            _selectedVariants.add(index);
-          }
-        });
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? const Color(0xFF3B9EFF) : Colors.transparent,
-            width: 3,
-          ),
-        ),
-        child: Stack(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: CachedNetworkImage(  // CHANGED: Use CachedNetworkImage
-                imageUrl: _generatedUrls[index],
-                fit: BoxFit.cover,
-                width: double.infinity,
-                height: double.infinity,
-                memCacheWidth: 400,  // Reduced memory cache
-                placeholder: (context, url) => Container(
-                  color: const Color(0xFF252A38),
-                  child: const Center(
-                    child: SizedBox(
-                      width: 30,
-                      height: 30,
-                      child: CircularProgressIndicator(
-                        color: Colors.blue,
-                        strokeWidth: 2.5,
-                      ),
-                    ),
-                  ),
-                ),
-                errorWidget: (context, url, error) => Container(
-                  color: const Color(0xFF252A38),
-                  child: const Center(
-                    child: Icon(Icons.error_outline, color: Colors.red, size: 32),
-                  ),
-                ),
-                fadeInDuration: const Duration(milliseconds: 200),  // Smooth fade
-                fadeOutDuration: const Duration(milliseconds: 100),
-              ),
-            ),
-            if (isSelected)
-              Positioned(
-                top: 10,
-                right: 10,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF3B9EFF),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.check, color: Colors.white, size: 18),
-                ),
-              ),
-          ],
-        ),
       ),
     );
   }
 
   Widget _buildBottomButton() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1F2E),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
+      color: Colors.grey[100],
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
       child: SizedBox(
         height: 54,
         child: ElevatedButton(
           onPressed: _isGenerating ? null : _handleButtonPress,
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF3B9EFF),
-            disabledBackgroundColor: const Color(0xFF3B9EFF).withOpacity(0.5),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+            backgroundColor: const Color(0xFF2667FF),
+            disabledBackgroundColor:
+                const Color(0xFF2667FF).withOpacity(0.6),
             elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+            ),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 _generationComplete ? Icons.refresh : Icons.auto_awesome,
-                color: Colors.white, 
-                size: 20
+                color: Colors.white,
+                size: 20,
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               Text(
-                _isGenerating 
-                    ? 'Generating...' 
-                    : _generationComplete 
-                        ? 'Generate Another Scenes'
-                        : 'Generate Scenes',
+                _isGenerating
+                    ? 'Generating...'
+                    : _generationComplete
+                        ? 'Generate Another Remix'
+                        : 'Generate Remix',
                 style: const TextStyle(
-                  fontSize: 15, 
-                  fontWeight: FontWeight.w600, 
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
                   color: Colors.white,
                   letterSpacing: 0.3,
                 ),
