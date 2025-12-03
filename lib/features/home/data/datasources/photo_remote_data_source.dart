@@ -5,7 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../../domain/entities/photo.dart';
 
 abstract class PhotoRemoteDataSource {
-  Future<void> uploadPhoto(File image, String userId);
+  Future<void> uploadPhoto(File image, String userId, {String? place, String? shotType, String? timeOfDay});
   Stream<List<Photo>> getPhotos(String userId);
 }
 
@@ -16,7 +16,7 @@ class PhotoRemoteDataSourceImpl implements PhotoRemoteDataSource {
   PhotoRemoteDataSourceImpl({required this.storage, required this.firestore});
 
   @override
-  Future<void> uploadPhoto(File image, String userId) async {
+  Future<void> uploadPhoto(File image, String userId, {String? place, String? shotType, String? timeOfDay}) async {
     final photoId = const Uuid().v4();
     final ref = storage.ref().child('users/$userId/uploads/$photoId.jpg');
     
@@ -25,12 +25,19 @@ class PhotoRemoteDataSourceImpl implements PhotoRemoteDataSource {
     final downloadUrl = await ref.getDownloadURL();
 
     // 2. Save metadata to Firestore (triggers Cloud Function)
-    await firestore.collection('users').doc(userId).collection('photos').doc(photoId).set({
+    final data = {
       'id': photoId,
       'originalUrl': downloadUrl,
       'status': 'pending',
       'createdAt': FieldValue.serverTimestamp(),
-    });
+    };
+    
+    // Add user preferences if provided
+    if (place != null) data['place'] = place;
+    if (shotType != null) data['shotType'] = shotType;
+    if (timeOfDay != null) data['timeOfDay'] = timeOfDay;
+    
+    await firestore.collection('users').doc(userId).collection('photos').doc(photoId).set(data);
   }
 
   @override
@@ -47,9 +54,12 @@ class PhotoRemoteDataSourceImpl implements PhotoRemoteDataSource {
         return Photo(
           id: data['id'],
           originalUrl: data['originalUrl'],
-          generatedUrl: data['generatedUrl'],
+          generatedUrls: (data['generatedUrls'] as List?)?.map((e) => e.toString()).toList() ?? [],
           status: data['status'] ?? 'pending',
           createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+          place: data['place'],
+          shotType: data['shotType'],
+          timeOfDay: data['timeOfDay'],
         );
       }).toList();
     });

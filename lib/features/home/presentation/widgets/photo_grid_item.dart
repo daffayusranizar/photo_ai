@@ -11,7 +11,9 @@ class PhotoGridItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final isCompleted = photo.status == 'completed';
     final isFailed = photo.status == 'failed';
-    final displayUrl = isCompleted ? photo.generatedUrl : photo.originalUrl;
+    final displayUrl = isCompleted && photo.generatedUrls.isNotEmpty 
+        ? photo.generatedUrls[0] 
+        : photo.originalUrl;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),

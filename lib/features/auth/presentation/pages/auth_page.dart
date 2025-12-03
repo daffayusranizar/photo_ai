@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../../../injection_container.dart';
 import '../../domain/usecases/sign_in_anonymously.dart';
-import '../../../home/presentation/pages/home_page.dart';
+import '../../../home/presentation/pages/remix_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class AuthPage extends StatefulWidget {
   const AuthPage({super.key});
@@ -12,6 +14,25 @@ class AuthPage extends StatefulWidget {
 
 class _AuthPageState extends State<AuthPage> {
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkOnboardingAndAuth();
+  }
+
+  Future<void> _checkOnboardingAndAuth() async {
+    final prefs = await SharedPreferences.getInstance();
+    final hasSeenOnboarding = prefs.getBool('hasSeenOnboarding') ?? false;
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (hasSeenOnboarding && user != null && mounted) {
+      // Skip to Remix Page
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const RemixPage()),
+      );
+    }
+  }
 
   Future<void> _signIn() async {
     setState(() => _isLoading = true);
@@ -28,10 +49,16 @@ class _AuthPageState extends State<AuthPage> {
           SnackBar(content: Text('Sign in failed: ${failure.toString()}')),
         );
       },
-      (user) {
-        // Navigate to Home Page on success
+      (user) async {
+        // Save onboarding flag
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('hasSeenOnboarding', true);
+
+        if (!mounted) return;
+
+        // Navigate to Remix Page on success
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const HomePage()),
+          MaterialPageRoute(builder: (_) => const RemixPage()),
         );
       },
     );

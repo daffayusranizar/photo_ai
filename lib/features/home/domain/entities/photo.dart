@@ -3,18 +3,26 @@ import 'package:equatable/equatable.dart';
 class Photo extends Equatable {
   final String id;
   final String originalUrl;
-  final String? generatedUrl;
+  final List<String> generatedUrls; // Changed from single URL to array for 4 variants
   final String status; // 'pending', 'completed', 'failed'
   final DateTime createdAt;
+  
+  // User preferences for generation
+  final String? place;
+  final String? shotType; // 'fullbody', 'half', 'closeup', 'landscape'
+  final String? timeOfDay; // 'morning', 'sunrise', 'noon', 'afternoon', 'sunset', 'night'
 
   const Photo({
     required this.id,
     required this.originalUrl,
-    this.generatedUrl,
+    this.generatedUrls = const [],
     required this.status,
     required this.createdAt,
+    this.place,
+    this.shotType,
+    this.timeOfDay,
   });
 
   @override
-  List<Object?> get props => [id, originalUrl, generatedUrl, status, createdAt];
+  List<Object?> get props => [id, originalUrl, generatedUrls, status, createdAt, place, shotType, timeOfDay];
 }

@@ -56,21 +56,32 @@ exports.generateTravelPhoto = functions.firestore
       const personDescription = await analysisResponse.text();
       console.log("✅ Person description:", personDescription);
 
-      // STEP 3: Pick random destination
-      const destinations = [
-        "relaxing on a pristine Bali beach at golden sunset with palm trees and turquoise water",
-        "sitting at a charming Parisian cafe with the Eiffel Tower visible in the background",
-        "standing in Tokyo's vibrant Shibuya crossing at night with colorful neon lights",
-        "hiking in a beautiful Swiss Alps meadow with snow-capped mountains and wildflowers",
-        "enjoying the view from a white Santorini terrace overlooking the Aegean sea",
-        "on a NYC rooftop with the Manhattan skyline at golden hour"
-      ];
+      // STEP 3: Read user preferences from document
+      const place = data.place || "a beautiful scenic location";
+      const shotType = data.shotType || "fullbody";
+      const timeOfDay = data.timeOfDay || "golden hour";
 
-      const randomDestination = destinations[Math.floor(Math.random() * destinations.length)];
-      console.log("📍 Destination:", randomDestination);
+      console.log("📍 User preferences:", { place, shotType, timeOfDay });
 
-      // STEP 4: Generate image using Imagen 3 Customization API
-      console.log("🖼️  Generating image with Imagen 3 Customization...");
+      // Map shot types and times to prompt phrases
+      const shotTypeMap = {
+        'fullbody': 'full body shot of',
+        'half': 'half body portrait of',
+        'closeup': 'close-up portrait of',
+        'landscape': 'wide landscape shot featuring'
+      };
+
+      const timeMap = {
+        'morning': 'in soft morning light',
+        'sunrise': 'during golden hour sunrise with warm tones',
+        'noon': 'in bright midday light',
+        'afternoon': 'in pleasant afternoon light',
+        'sunset': 'during golden hour sunset with warm glow',
+        'night': 'at night with dramatic lighting'
+      };
+
+      // STEP 4: Generate 4 images using Imagen 3 Customization API
+      console.log("🖼️  Generating 4 variants with Imagen 3 Customization...");
 
       const { GoogleAuth } = require('google-auth-library');
       const auth = new GoogleAuth({
@@ -80,8 +91,11 @@ exports.generateTravelPhoto = functions.firestore
       const projectId = await auth.getProjectId();
       const accessToken = await client.getAccessToken();
 
-      // Create prompt with reference to subject [1]
-      const generatePrompt = `Create a photorealistic travel photograph of ${personDescription} [1] ${randomDestination}. Professional travel photography, natural lighting, vibrant colors, high quality. The person should be the main subject, clearly visible and naturally integrated into the scene.`;
+      // Build prompt using user preferences
+      const shotPhrase = shotTypeMap[shotType] || shotTypeMap['fullbody'];
+      const timePhrase = timeMap[timeOfDay] || timeMap['sunset'];
+
+      const generatePrompt = `Create a photorealistic travel photograph: ${shotPhrase} a person[1] at ${place} ${timePhrase}. Professional travel photography, natural lighting, vibrant colors, high quality. The person should be the main subject and naturally integrated into the scene.`;
 
       console.log("Calling Imagen 3 Customization API...");
       const fetch = (await import('node-fetch')).default;
@@ -110,7 +124,7 @@ exports.generateTravelPhoto = functions.firestore
               }]
             }],
             parameters: {
-              sampleCount: 1,
+              sampleCount: 4,  // Generate 4 variants
               language: "en"
             }
           })
@@ -128,37 +142,53 @@ exports.generateTravelPhoto = functions.firestore
         throw new Error("Imagen returned no predictions");
       }
 
-      const imageBase64Data = imagenData.predictions[0].bytesBase64Encoded;
-      if (!imageBase64Data) {
-        throw new Error("No image data in Imagen response");
+      console.log(`✅ Generated ${imagenData.predictions.length} variants`);
+
+      // STEP 5: Upload all 4 variant images to Storage
+      const bucket = admin.storage().bucket();
+      const generatedUrls = [];
+
+      for (let i = 0; i < imagenData.predictions.length; i++) {
+        const prediction = imagenData.predictions[i];
+        const imageBase64Data = prediction.bytesBase64Encoded;
+
+        if (!imageBase64Data) {
+          console.log(`⚠️  Variant ${i + 1} has no image data, skipping`);
+          continue;
+        }
+
+        const imageBuffer = Buffer.from(imageBase64Data, 'base64');
+        const fileName = `generated/${userId}/${photoId}_variant_${i + 1}.png`;
+        const file = bucket.file(fileName);
+
+        console.log(`📤 Uploading variant ${i + 1}/${imagenData.predictions.length}...`);
+        await file.save(imageBuffer, { metadata: { contentType: "image/png" } });
+        await file.makePublic();
+
+        const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
+        generatedUrls.push(publicUrl);
+        console.log(`✅ Variant ${i + 1} uploaded (${imageBuffer.length} bytes)`);
       }
 
-      const imageBuffer = Buffer.from(imageBase64Data, 'base64');
-      console.log(`✅ Image generated (${imageBuffer.length} bytes)`);
+      if (generatedUrls.length === 0) {
+        throw new Error("No valid images were generated");
+      }
 
-      // STEP 5: Upload to Storage
-      const bucket = admin.storage().bucket();
-      const fileName = `generated/${userId}/${photoId}_travel.png`;
-      const file = bucket.file(fileName);
-
-      console.log("📤 Uploading to Storage...");
-      await file.save(imageBuffer, { metadata: { contentType: "image/png" } });
-      await file.makePublic();
-
-      const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
-
-      // STEP 6: Update Firestore
+      // STEP 6: Update Firestore with all variant URLs
       await snap.ref.update({
         status: "completed",
-        generatedUrl: publicUrl,
+        generatedUrls: generatedUrls,
         personDescription,
-        destination: randomDestination,
+        place: place,
+        shotType: shotType,
+        timeOfDay: timeOfDay,
         fullPrompt: generatePrompt,
         originalImageUrl: imageUrl,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
 
-      console.log(`🎉 SUCCESS: ${publicUrl}`);
+      console.log(`🎉 SUCCESS: Generated ${generatedUrls.length} variants`);
+      console.log("URLs:", generatedUrls);
 
     } catch (error) {
       console.error("❌ ERROR:", error.message);

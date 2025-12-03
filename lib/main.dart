@@ -11,10 +11,10 @@ void main() async {
   await Firebase.initializeApp();
   
   // Initialize App Check with debug provider for development/emulator
-  await FirebaseAppCheck.instance.activate(
-    androidProvider: AndroidProvider.debug,  // Use debug for emulator/local testing
-    appleProvider: AppleProvider.debug,      // Use debug for iOS simulator
-  );
+  // await FirebaseAppCheck.instance.activate(
+  //   androidProvider: AndroidProvider.debug,  // Use debug for emulator/local testing
+  //   appleProvider: AppleProvider.debug,      // Use debug for iOS simulator
+  // );
   
   await di.init();
   runApp(const MyApp());
