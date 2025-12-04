@@ -731,11 +731,16 @@ exports.generateTravelPhoto = functions
 
     if (data.status !== "pending") return;
 
+    // DECLARE VARIABLES AT FUNCTION SCOPE
+    let referenceImageBase64;
+    let personDescription = "";
+    let generatedPaths = [];
+    let successfulVariants = 0;
+
     try {
       console.log(`🔄 Processing photo ${photoId} for user ${userId}`);
 
       const bucket = admin.storage().bucket();
-      let referenceImageBase64;
 
       // STEP 1: Get original image
       if (data.originalPath) {
@@ -781,7 +786,7 @@ Example outputs:
         throw new Error("Gemini analysis returned no candidates");
       }
 
-      const personDescription = await analysisResponse.text();
+      personDescription = await analysisResponse.text();
       console.log("✅ Person description:", personDescription);
 
       // STEP 3: Read user preferences
@@ -888,8 +893,6 @@ A believable, authentic travel photo that looks like it was taken on someone's i
       });
       console.log(`🎬 Starting generation of ${variantCount} variants with progressive updates`);
 
-      let successfulVariants = 0;
-
       for (let i = 0; i < variantCount; i++) {
         console.log(`✨ Generating variant ${i + 1}/${variantCount}...`);
 
@@ -941,7 +944,9 @@ A believable, authentic travel photo that looks like it was taken on someone's i
 
         console.log(`📤 Uploading variant ${i + 1}/${variantCount}...`);
         await file.save(imageBuffer, { metadata: { contentType: "image/png" } });
+
         successfulVariants++;
+        generatedPaths.push(fileName); // Track locally as well
 
         // PROGRESSIVE UPDATE: Save this variant to Firestore immediately
         const isLastVariant = (i + 1) === variantCount;
@@ -971,15 +976,19 @@ A believable, authentic travel photo that looks like it was taken on someone's i
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
 
-      console.log(`🎉 SUCCESS: Generated ${generatedPaths.length} variants with intelligent lighting system`);
+      console.log(`🎉 SUCCESS: Generated ${successfulVariants} variants with intelligent lighting system`);
       console.log(`📊 Used: ${timeOfDay} lighting + ${sceneType} location modifiers`);
 
     } catch (error) {
       console.error("❌ ERROR:", error.message);
 
+      // Save partial progress if any variants succeeded
       await snap.ref.update({
         status: "failed",
         error: error.message,
+        personDescription: personDescription, // Save if analysis completed
+        partialSuccess: successfulVariants > 0,
+        variantsCompleted: successfulVariants,
       });
     }
   });

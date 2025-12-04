@@ -23,7 +23,6 @@ class RemixPage extends StatefulWidget {
 
 class _RemixPageState extends State<RemixPage> {
   File? _imageFile;
-  // final TextEditingController _placeController = TextEditingController(); // Removed
   
   // Comprehensive Scene Selection - matches Cloud Function sceneMap
   final List<Map<String, String>> _scenes = [
@@ -55,7 +54,7 @@ class _RemixPageState extends State<RemixPage> {
     // LANDMARKS & TRAVEL
     {'id': 'eiffel_tower', 'label': 'Eiffel Tower', 'icon': '🗼', 'category': 'Landmarks'},
     {'id': 'times_square', 'label': 'Times Square', 'icon': '🗽', 'category': 'Landmarks'},
-    {'id': 'colosseum', 'label': 'Colosseum', 'icon': '�️', 'category': 'Landmarks'},
+    {'id': 'colosseum', 'label': 'Colosseum', 'icon': '🏛️', 'category': 'Landmarks'},
     {'id': 'taj_mahal', 'label': 'Taj Mahal', 'icon': '🕌', 'category': 'Landmarks'},
     {'id': 'statue_liberty', 'label': 'Statue of Liberty', 'icon': '🗽', 'category': 'Landmarks'},
     {'id': 'big_ben', 'label': 'Big Ben', 'icon': '🕰️', 'category': 'Landmarks'},
@@ -80,7 +79,7 @@ class _RemixPageState extends State<RemixPage> {
     {'id': 'cherry_blossoms', 'label': 'Cherry Blossoms', 'icon': '🌸', 'category': 'Seasonal'},
     {'id': 'autumn_leaves', 'label': 'Autumn Leaves', 'icon': '🍂', 'category': 'Seasonal'},
     {'id': 'snow_scene', 'label': 'Snow Scene', 'icon': '❄️', 'category': 'Seasonal'},
-    {'id': 'rain', 'label': 'Rain', 'icon': '�️', 'category': 'Seasonal'},
+    {'id': 'rain', 'label': 'Rain', 'icon': '🌧️', 'category': 'Seasonal'},
     
     // UNIQUE & CREATIVE
     {'id': 'graffiti_wall', 'label': 'Graffiti Wall', 'icon': '🎨', 'category': 'Creative'},
@@ -96,6 +95,7 @@ class _RemixPageState extends State<RemixPage> {
   String _selectedTime = 'Sunset';
 
   bool _isGenerating = false;
+  bool _isUploading = false;
   bool _isLoadingImage = false;
   bool _generationComplete = false;
   List<String> _generatedPaths = [];
@@ -128,7 +128,6 @@ class _RemixPageState extends State<RemixPage> {
   void initState() {
     super.initState();
     _imageFile = widget.imageFile;
-    // _placeController.text = ''; // Removed
   }
 
   Future<void> _pickImage(ImageSource source) async {
@@ -223,8 +222,6 @@ class _RemixPageState extends State<RemixPage> {
   }
 
   Future<void> _generateScenes() async {
-    // Removed place controller check
-
     if (_imageFile == null) {
       print('❌ [RemixPage] No image selected - cannot generate');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -239,7 +236,8 @@ class _RemixPageState extends State<RemixPage> {
     print('   ⏰ Time of Day: $_selectedTime');
 
     setState(() {
-      _isGenerating = true;
+      _isUploading = true; // Start with upload state
+      _isGenerating = false;
       _generatedPaths.clear();
       _generationComplete = false;
       _selectedPreviewIndex = 0;
@@ -251,7 +249,7 @@ class _RemixPageState extends State<RemixPage> {
       print('   ⬆️  Uploading image to Firebase...');
       final result = await uploadUseCase(
         _imageFile!,
-        sceneType: _selectedSceneId, // Passing scene ID as sceneType
+        sceneType: _selectedSceneId,
         shotType: _selectedShotType.toLowerCase(),
         timeOfDay: _selectedTime.toLowerCase(),
       );
@@ -260,7 +258,10 @@ class _RemixPageState extends State<RemixPage> {
       result.fold(
         (failure) {
           if (mounted) {
-            setState(() => _isGenerating = false);
+            setState(() {
+              _isUploading = false;
+              _isGenerating = false;
+            });
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text('Upload failed: $failure')),
             );
@@ -268,6 +269,12 @@ class _RemixPageState extends State<RemixPage> {
         },
         (_) async {
           if (!mounted) return;
+
+          // Upload complete, now switch to generating state
+          setState(() {
+            _isUploading = false;
+            _isGenerating = true;
+          });
 
           try {
             final user = FirebaseAuth.instance.currentUser;
@@ -314,7 +321,10 @@ class _RemixPageState extends State<RemixPage> {
       );
     } catch (e) {
       if (mounted) {
-        setState(() => _isGenerating = false);
+        setState(() {
+          _isUploading = false;
+          _isGenerating = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error: $e')),
         );
@@ -353,6 +363,10 @@ class _RemixPageState extends State<RemixPage> {
           // Check if new variant arrived
           final hasNewVariant = paths.length > _generatedPaths.length;
 
+          print('📊 [RemixPage] Firestore update:');
+          print('   Paths: ${paths.length}, Completed: $completed/$total, Status: $status');
+          print('   Current state: _generatedPaths=${_generatedPaths.length}, _isGenerating=$_isGenerating');
+
           if (mounted) {
             setState(() {
               _generatedPaths = paths;
@@ -367,20 +381,22 @@ class _RemixPageState extends State<RemixPage> {
               }
             });
 
-            // Log progress
-            if (hasNewVariant) {
-              print('🎉 [RemixPage] New variant arrived! ($completed/$total)');
+            print('   ✅ State updated: _generatedPaths=${_generatedPaths.length}, _isGenerating=$_isGenerating');
+
+            // Show toast notification for new variant
+            if (hasNewVariant && paths.isNotEmpty) {
+              final remaining = total - paths.length;
+              final message = remaining > 0
+                  ? 'Variant ${paths.length} ready! Generating $remaining more...'
+                  : 'All variants complete!';
               
-              // Show subtle notification
-              if (completed < total) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Variant $completed ready! Generating ${total - completed} more...'),
-                    duration: const Duration(seconds: 2),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              }
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(message),
+                  duration: const Duration(seconds: 2),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
             }
           }
 
@@ -432,7 +448,6 @@ class _RemixPageState extends State<RemixPage> {
 
   @override
   void dispose() {
-    // _placeController.dispose(); // Removed
     _generationSubscription?.cancel();
     super.dispose();
   }
@@ -441,7 +456,7 @@ class _RemixPageState extends State<RemixPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[100],
-      resizeToAvoidBottomInset: true, // Important for keyboard handling
+      resizeToAvoidBottomInset: true,
       body: SafeArea(
         child: Column(
           children: [
@@ -531,13 +546,78 @@ class _RemixPageState extends State<RemixPage> {
     final bool hasResults = _generatedPaths.isNotEmpty;
     final bool hasSelfie = _imageFile != null;
 
+    print('🖼️ [Preview] Building preview: hasResults=$hasResults (${_generatedPaths.length} paths), _isGenerating=$_isGenerating, _isUploading=$_isUploading');
+
     Widget child;
 
-    // Priority: Show completed images if available, even while generating
-    if (hasResults) {
+    // FIXED: Check states in priority order: Upload > Generate > Results > Selfie > Empty
+    // This prevents flashing between states
+    if (_isUploading) {
+      // Priority 1: Show upload state first
+      child = Column(
+        key: const ValueKey('uploading'),
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: const [
+          SizedBox(
+            width: 32,
+            height: 32,
+            child: CircularProgressIndicator(
+              strokeWidth: 3,
+              color: Color(0xFF2667FF),
+            ),
+          ),
+          SizedBox(height: 12),
+          Text(
+            'Uploading your photo...',
+            style: TextStyle(
+              color: Colors.black87,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          SizedBox(height: 4),
+          Text(
+            'This will only take a moment',
+            style: TextStyle(color: Colors.black45, fontSize: 12),
+          ),
+        ],
+      );
+    } else if (_isGenerating && !hasResults) {
+      // Priority 2: Show generating state (before first result arrives)
+      child = Column(
+        key: const ValueKey('generating_initial'),
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: const [
+          SizedBox(
+            width: 32,
+            height: 32,
+            child: CircularProgressIndicator(
+              strokeWidth: 3,
+              color: Color(0xFF2667FF),
+            ),
+          ),
+          SizedBox(height: 12),
+          Text(
+            'Starting generation...',
+            style: TextStyle(
+              color: Colors.black87,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          SizedBox(height: 4),
+          Text(
+            'First variant in 30-60 seconds',
+            style: TextStyle(color: Colors.black45, fontSize: 12),
+          ),
+        ],
+      );
+    } else if (hasResults) {
+      // Priority 3: Show generated images (even while still generating)
       final imagePath = _generatedPaths[
           _selectedPreviewIndex.clamp(0, _generatedPaths.length - 1)];
       child = Stack(
+        key: ValueKey('result_$imagePath'), // Unique key per image
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(24),
@@ -588,37 +668,10 @@ class _RemixPageState extends State<RemixPage> {
             ),
         ],
       );
-    } else if (_isGenerating) {
-      // Only show loading spinner if no images are ready yet
-      child = Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const SizedBox(
-            width: 32,
-            height: 32,
-            child: CircularProgressIndicator(
-              strokeWidth: 3,
-              color: Color(0xFF2667FF),
-            ),
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            'Starting generation...',
-            style: TextStyle(
-              color: Colors.black87,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'First variant in 30-60 seconds',
-            style: TextStyle(color: Colors.black45, fontSize: 12),
-          ),
-        ],
-      );
     } else if (hasSelfie) {
+      // Priority 4: Show selfie preview
       child = ClipRRect(
+        key: ValueKey('selfie_${_imageFile?.path}'),
         borderRadius: BorderRadius.circular(24),
         child: Image.file(
           _imageFile!,
@@ -628,7 +681,9 @@ class _RemixPageState extends State<RemixPage> {
         ),
       );
     } else {
+      // Priority 5: Empty state
       child = Column(
+        key: const ValueKey('empty'),
         mainAxisAlignment: MainAxisAlignment.center,
         children: const [
           Icon(Icons.auto_awesome, size: 40, color: Color(0xFF2667FF)),
@@ -659,7 +714,7 @@ class _RemixPageState extends State<RemixPage> {
       child: Container(
         width: double.infinity,
         constraints: const BoxConstraints(
-          minHeight: 280, // Minimum height to prevent card from being too small
+          minHeight: 280,
         ),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -674,9 +729,10 @@ class _RemixPageState extends State<RemixPage> {
         ),
         padding: const EdgeInsets.all(16),
         child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 200),
+          duration: const Duration(milliseconds: 300),
           child: _isLoadingImage
               ? const Center(
+                  key: ValueKey('loading'),
                   child: SizedBox(
                     width: 32,
                     height: 32,
