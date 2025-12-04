@@ -10,9 +10,8 @@ class PhotoGridItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isCompleted = photo.status == 'completed';
-    final isFailed = photo.status == 'failed';
-    final displayPath = isCompleted && photo.generatedPaths.isNotEmpty 
+    // Show first generated variant if available, otherwise show original
+    final displayPath = photo.generatedPaths.isNotEmpty 
         ? photo.generatedPaths[0] 
         : photo.originalPath;
 
@@ -22,55 +21,69 @@ class PhotoGridItem extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           // Main Image
-          if (displayPath.isNotEmpty)
-            PrivateImage(
-              storagePath: displayPath,
-              fit: BoxFit.cover,
-              placeholder: (context, url) => Container(color: Colors.grey[200]),
-              errorWidget: (context, url, error) => const Icon(Icons.error),
-            )
-          else
-            Container(color: Colors.grey[300]),
-
-          // Overlay for Pending State
-          if (!isCompleted && !isFailed)
-            Container(
-              color: Colors.black54,
+          PrivateImage(
+            storagePath: displayPath,
+            fit: BoxFit.cover,
+            placeholder: (context, url) => Container(
+              color: Colors.grey[200],
               child: const Center(
-                child: CircularProgressIndicator(color: Colors.white),
-              ),
-            ),
-
-          // Overlay for Failed State
-          if (isFailed)
-            Container(
-              color: Colors.red.withOpacity(0.5),
-              child: const Center(
-                child: Icon(Icons.error_outline, color: Colors.white, size: 32),
-              ),
-            ),
-
-          // Status Label (Optional)
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.bottomCenter,
-                  end: Alignment.topCenter,
-                  colors: [Colors.black87, Colors.transparent],
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    color: Color(0xFF2667FF),
+                  ),
                 ),
               ),
-              child: Text(
-                isCompleted ? '✨ AI Magic' : (isFailed ? 'Failed' : 'Processing...'),
-                style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center,
+            ),
+            errorWidget: (context, url, error) => Container(
+              color: Colors.grey[200],
+              child: const Center(
+                child: Icon(
+                  Icons.error_outline,
+                  color: Colors.black26,
+                  size: 32,
+                ),
               ),
             ),
           ),
+
+          // Subtle badge if it has generated variants
+          if (photo.generatedPaths.isNotEmpty)
+            Positioned(
+              bottom: 8,
+              right: 8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.6),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.auto_awesome,
+                      color: Colors.white,
+                      size: 12,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${photo.generatedPaths.length}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
     );

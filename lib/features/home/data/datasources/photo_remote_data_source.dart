@@ -5,7 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../../domain/entities/photo.dart';
 
 abstract class PhotoRemoteDataSource {
-  Future<void> uploadPhoto(File image, String userId, {String? place, String? shotType, String? timeOfDay});
+  Future<void> uploadPhoto(File image, String userId, {String? sceneType, String? shotType, String? timeOfDay});
   Stream<List<Photo>> getPhotos(String userId);
 }
 
@@ -16,7 +16,7 @@ class PhotoRemoteDataSourceImpl implements PhotoRemoteDataSource {
   PhotoRemoteDataSourceImpl({required this.storage, required this.firestore});
 
   @override
-  Future<void> uploadPhoto(File image, String userId, {String? place, String? shotType, String? timeOfDay}) async {
+  Future<void> uploadPhoto(File image, String userId, {String? sceneType, String? shotType, String? timeOfDay}) async {
     final photoId = const Uuid().v4();
     final storagePath = 'users/$userId/uploads/$photoId.jpg';
     final ref = storage.ref().child(storagePath);
@@ -34,7 +34,7 @@ class PhotoRemoteDataSourceImpl implements PhotoRemoteDataSource {
     };
     
     // Add user preferences if provided
-    if (place != null) data['place'] = place;
+    if (sceneType != null) data['sceneType'] = sceneType;
     if (shotType != null) data['shotType'] = shotType;
     if (timeOfDay != null) data['timeOfDay'] = timeOfDay;
     

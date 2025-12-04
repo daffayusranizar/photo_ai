@@ -23,7 +23,75 @@ class RemixPage extends StatefulWidget {
 
 class _RemixPageState extends State<RemixPage> {
   File? _imageFile;
-  final TextEditingController _placeController = TextEditingController();
+  // final TextEditingController _placeController = TextEditingController(); // Removed
+  
+  // Comprehensive Scene Selection - matches Cloud Function sceneMap
+  final List<Map<String, String>> _scenes = [
+    // ORIGINAL CORE SCENES
+    {'id': 'cafe', 'label': 'Café', 'icon': '☕', 'category': 'Popular'},
+    {'id': 'mountain', 'label': 'Mountain', 'icon': '🏔️', 'category': 'Popular'},
+    {'id': 'beach', 'label': 'Beach', 'icon': '🏖️', 'category': 'Popular'},
+    {'id': 'luxury_car', 'label': 'Luxury Car', 'icon': '🚗', 'category': 'Popular'},
+    {'id': 'city_street', 'label': 'City Street', 'icon': '🏙️', 'category': 'Popular'},
+    
+    // NATURE & OUTDOOR
+    {'id': 'forest', 'label': 'Forest', 'icon': '🌲', 'category': 'Nature'},
+    {'id': 'lake', 'label': 'Lake', 'icon': '🏞️', 'category': 'Nature'},
+    {'id': 'waterfall', 'label': 'Waterfall', 'icon': '💧', 'category': 'Nature'},
+    {'id': 'desert', 'label': 'Desert', 'icon': '🏜️', 'category': 'Nature'},
+    {'id': 'garden', 'label': 'Garden', 'icon': '🌺', 'category': 'Nature'},
+    {'id': 'park', 'label': 'Park', 'icon': '🌳', 'category': 'Nature'},
+    {'id': 'sunset_field', 'label': 'Sunset Field', 'icon': '🌅', 'category': 'Nature'},
+    
+    // URBAN & ARCHITECTURE
+    {'id': 'rooftop', 'label': 'Rooftop', 'icon': '🏢', 'category': 'Urban'},
+    {'id': 'bridge', 'label': 'Bridge', 'icon': '🌉', 'category': 'Urban'},
+    {'id': 'shopping_district', 'label': 'Shopping District', 'icon': '🛍️', 'category': 'Urban'},
+    {'id': 'metro_station', 'label': 'Metro Station', 'icon': '🚇', 'category': 'Urban'},
+    {'id': 'skyscraper', 'label': 'Skyscraper', 'icon': '🏙️', 'category': 'Urban'},
+    {'id': 'alley', 'label': 'Alley', 'icon': '🏘️', 'category': 'Urban'},
+    {'id': 'plaza', 'label': 'Plaza', 'icon': '🏛️', 'category': 'Urban'},
+    
+    // LANDMARKS & TRAVEL
+    {'id': 'eiffel_tower', 'label': 'Eiffel Tower', 'icon': '🗼', 'category': 'Landmarks'},
+    {'id': 'times_square', 'label': 'Times Square', 'icon': '🗽', 'category': 'Landmarks'},
+    {'id': 'colosseum', 'label': 'Colosseum', 'icon': '�️', 'category': 'Landmarks'},
+    {'id': 'taj_mahal', 'label': 'Taj Mahal', 'icon': '🕌', 'category': 'Landmarks'},
+    {'id': 'statue_liberty', 'label': 'Statue of Liberty', 'icon': '🗽', 'category': 'Landmarks'},
+    {'id': 'big_ben', 'label': 'Big Ben', 'icon': '🕰️', 'category': 'Landmarks'},
+    
+    // LEISURE & ACTIVITIES
+    {'id': 'airport', 'label': 'Airport', 'icon': '✈️', 'category': 'Activities'},
+    {'id': 'gym', 'label': 'Gym', 'icon': '💪', 'category': 'Activities'},
+    {'id': 'library', 'label': 'Library', 'icon': '📚', 'category': 'Activities'},
+    {'id': 'museum', 'label': 'Museum', 'icon': '🖼️', 'category': 'Activities'},
+    {'id': 'restaurant', 'label': 'Restaurant', 'icon': '🍽️', 'category': 'Activities'},
+    {'id': 'hotel_lobby', 'label': 'Hotel Lobby', 'icon': '🏨', 'category': 'Activities'},
+    {'id': 'pool', 'label': 'Pool', 'icon': '🏊', 'category': 'Activities'},
+    {'id': 'yacht', 'label': 'Yacht', 'icon': '🛥️', 'category': 'Activities'},
+    
+    // COZY & INDOOR
+    {'id': 'bookstore', 'label': 'Bookstore', 'icon': '📖', 'category': 'Indoor'},
+    {'id': 'coffee_shop', 'label': 'Coffee Shop', 'icon': '☕', 'category': 'Indoor'},
+    {'id': 'home_interior', 'label': 'Home Interior', 'icon': '🏠', 'category': 'Indoor'},
+    {'id': 'balcony', 'label': 'Balcony', 'icon': '🪴', 'category': 'Indoor'},
+    
+    // SEASONAL & SPECIAL
+    {'id': 'cherry_blossoms', 'label': 'Cherry Blossoms', 'icon': '🌸', 'category': 'Seasonal'},
+    {'id': 'autumn_leaves', 'label': 'Autumn Leaves', 'icon': '🍂', 'category': 'Seasonal'},
+    {'id': 'snow_scene', 'label': 'Snow Scene', 'icon': '❄️', 'category': 'Seasonal'},
+    {'id': 'rain', 'label': 'Rain', 'icon': '�️', 'category': 'Seasonal'},
+    
+    // UNIQUE & CREATIVE
+    {'id': 'graffiti_wall', 'label': 'Graffiti Wall', 'icon': '🎨', 'category': 'Creative'},
+    {'id': 'neon_lights', 'label': 'Neon Lights', 'icon': '💡', 'category': 'Creative'},
+    {'id': 'vintage_car', 'label': 'Vintage Car', 'icon': '🚙', 'category': 'Creative'},
+    {'id': 'motorcycle', 'label': 'Motorcycle', 'icon': '🏍️', 'category': 'Creative'},
+    {'id': 'ferris_wheel', 'label': 'Ferris Wheel', 'icon': '🎡', 'category': 'Creative'},
+    {'id': 'concert_venue', 'label': 'Concert', 'icon': '🎸', 'category': 'Creative'},
+    {'id': 'sports_stadium', 'label': 'Sports Stadium', 'icon': '🏟️', 'category': 'Creative'},
+  ];
+  String _selectedSceneId = 'cafe';
   String _selectedShotType = 'Fullbody';
   String _selectedTime = 'Sunset';
 
@@ -34,6 +102,10 @@ class _RemixPageState extends State<RemixPage> {
   final ImagePicker _picker = ImagePicker();
   StreamSubscription? _generationSubscription;
   String? _currentPhotoId;
+
+  // Progressive generation tracking
+  int _variantsCompleted = 0;
+  int _variantsTotal = 4;
 
   int _selectedPreviewIndex = 0;
 
@@ -56,7 +128,7 @@ class _RemixPageState extends State<RemixPage> {
   void initState() {
     super.initState();
     _imageFile = widget.imageFile;
-    _placeController.text = '';
+    // _placeController.text = ''; // Removed
   }
 
   Future<void> _pickImage(ImageSource source) async {
@@ -151,19 +223,20 @@ class _RemixPageState extends State<RemixPage> {
   }
 
   Future<void> _generateScenes() async {
-    if (_placeController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a place')),
-      );
-      return;
-    }
+    // Removed place controller check
 
     if (_imageFile == null) {
+      print('❌ [RemixPage] No image selected - cannot generate');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please upload a selfie first')),
       );
       return;
     }
+
+    print('🚀 [RemixPage] Starting image generation...');
+    print('   📍 Scene: $_selectedSceneId');
+    print('   📸 Shot Type: $_selectedShotType');
+    print('   ⏰ Time of Day: $_selectedTime');
 
     setState(() {
       _isGenerating = true;
@@ -175,12 +248,14 @@ class _RemixPageState extends State<RemixPage> {
     try {
       final uploadUseCase = sl<UploadPhoto>();
 
+      print('   ⬆️  Uploading image to Firebase...');
       final result = await uploadUseCase(
         _imageFile!,
-        place: _placeController.text.trim(),
+        sceneType: _selectedSceneId, // Passing scene ID as sceneType
         shotType: _selectedShotType.toLowerCase(),
         timeOfDay: _selectedTime.toLowerCase(),
       );
+      print('   ✅ Upload complete - Cloud Function triggered');
 
       result.fold(
         (failure) {
@@ -252,6 +327,8 @@ class _RemixPageState extends State<RemixPage> {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) return;
 
+    print('👂 [RemixPage] Listening for progressive generation results...');
+
     _generationSubscription = FirebaseFirestore.instance
         .collection('users')
         .doc(userId)
@@ -264,19 +341,52 @@ class _RemixPageState extends State<RemixPage> {
       if (snapshot.exists) {
         final data = snapshot.data();
 
-        if (data != null && data['generatedPaths'] != null) {
-          final paths = List<String>.from(data['generatedPaths'] as List);
+        if (data != null) {
+          // Get progressive update data
+          final paths = data['generatedPaths'] != null 
+              ? List<String>.from(data['generatedPaths'] as List)
+              : <String>[];
+          final completed = data['variantsCompleted'] ?? 0;
+          final total = data['variantsTotal'] ?? 4;
+          final status = data['status'] ?? 'pending';
 
-          if (paths.isNotEmpty) {
-            if (mounted) {
-              setState(() {
-                _generatedPaths = paths;
-                _isGenerating = false;
-                _generationComplete = true;
-                _selectedPreviewIndex = 0;
-              });
+          // Check if new variant arrived
+          final hasNewVariant = paths.length > _generatedPaths.length;
+
+          if (mounted) {
+            setState(() {
+              _generatedPaths = paths;
+              _variantsCompleted = completed;
+              _variantsTotal = total;
+              _isGenerating = status == 'generating';
+              _generationComplete = status == 'completed';
+              
+              // Auto-select the latest variant when it arrives
+              if (hasNewVariant && paths.isNotEmpty) {
+                _selectedPreviewIndex = paths.length - 1;
+              }
+            });
+
+            // Log progress
+            if (hasNewVariant) {
+              print('🎉 [RemixPage] New variant arrived! ($completed/$total)');
+              
+              // Show subtle notification
+              if (completed < total) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Variant $completed ready! Generating ${total - completed} more...'),
+                    duration: const Duration(seconds: 2),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
             }
+          }
 
+          // Cancel listener when complete
+          if (status == 'completed') {
+            print('✅ [RemixPage] All variants completed!');
             _generationSubscription?.cancel();
           }
         }
@@ -291,16 +401,38 @@ class _RemixPageState extends State<RemixPage> {
     });
   }
 
-  void _handleButtonPress() {
-    if (_generationComplete) {
-      _resetGenerationData();
+  void _resetAll() {
+    print('🔄 [RemixPage] Resetting all data - clearing image and selections');
+    _generationSubscription?.cancel();
+    if (mounted) {
+      setState(() {
+        _imageFile = null;
+        _generatedPaths.clear();
+        _generationComplete = false;
+        _currentPhotoId = null;
+        _selectedPreviewIndex = 0;
+        // Reset to defaults
+        _selectedSceneId = 'cafe';
+        _selectedShotType = 'Fullbody';
+        _selectedTime = 'Sunset';
+      });
     }
-    _generateScenes();
+  }
+
+  void _handleButtonPress() {
+    print('🔘 [RemixPage] Generate button pressed');
+    if (_generationComplete) {
+      print('   ↳ Generation complete - resetting for new remix');
+      _resetAll();
+    } else {
+      print('   ↳ Starting new generation');
+      _generateScenes();
+    }
   }
 
   @override
   void dispose() {
-    _placeController.dispose();
+    // _placeController.dispose(); // Removed
     _generationSubscription?.cancel();
     super.dispose();
   }
@@ -343,7 +475,7 @@ class _RemixPageState extends State<RemixPage> {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
                 children: [
-                  _buildLocationDisplay(),
+                  _buildSceneSelector(),
                   const SizedBox(height: 10),
                   _buildOptionsRow(),
                   const SizedBox(height: 12),
@@ -401,11 +533,67 @@ class _RemixPageState extends State<RemixPage> {
 
     Widget child;
 
-    if (_isGenerating) {
+    // Priority: Show completed images if available, even while generating
+    if (hasResults) {
+      final imagePath = _generatedPaths[
+          _selectedPreviewIndex.clamp(0, _generatedPaths.length - 1)];
+      child = Stack(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: PrivateImage(
+              storagePath: imagePath,
+              fit: BoxFit.cover,
+              width: double.infinity,
+              height: double.infinity,
+            ),
+          ),
+          // Show progress overlay if still generating
+          if (_isGenerating)
+            Positioned(
+              bottom: 16,
+              left: 16,
+              right: 16,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.75),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Generating $_variantsCompleted/$_variantsTotal...',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      );
+    } else if (_isGenerating) {
+      // Only show loading spinner if no images are ready yet
       child = Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: const [
-          SizedBox(
+        children: [
+          const SizedBox(
             width: 32,
             height: 32,
             child: CircularProgressIndicator(
@@ -413,33 +601,21 @@ class _RemixPageState extends State<RemixPage> {
               color: Color(0xFF2667FF),
             ),
           ),
-          SizedBox(height: 12),
-          Text(
-            'Your remix will appear here',
+          const SizedBox(height: 12),
+          const Text(
+            'Starting generation...',
             style: TextStyle(
               color: Colors.black87,
               fontSize: 14,
               fontWeight: FontWeight.w500,
             ),
           ),
-          SizedBox(height: 4),
-          Text(
-            'Generating new variants...',
+          const SizedBox(height: 4),
+          const Text(
+            'First variant in 30-60 seconds',
             style: TextStyle(color: Colors.black45, fontSize: 12),
           ),
         ],
-      );
-    } else if (hasResults) {
-      final imagePath = _generatedPaths[
-          _selectedPreviewIndex.clamp(0, _generatedPaths.length - 1)];
-      child = ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: PrivateImage(
-          storagePath: imagePath,
-          fit: BoxFit.cover,
-          width: double.infinity,
-          height: double.infinity,
-        ),
       );
     } else if (hasSelfie) {
       child = ClipRRect(
@@ -517,7 +693,8 @@ class _RemixPageState extends State<RemixPage> {
   }
 
   Widget _buildThumbnailStrip() {
-    if (_generatedPaths.isEmpty) {
+    // Always show thumbnail strip when generating or has results
+    if (!_isGenerating && _generatedPaths.isEmpty) {
       return const SizedBox.shrink();
     }
 
@@ -525,75 +702,271 @@ class _RemixPageState extends State<RemixPage> {
       height: 72,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        itemCount: _generatedPaths.length,
+        itemCount: _variantsTotal,
         separatorBuilder: (_, __) => const SizedBox(width: 10),
         itemBuilder: (context, index) {
+          final hasImage = index < _generatedPaths.length;
           final isSelected = index == _selectedPreviewIndex;
-          return GestureDetector(
-            onTap: () {
-              setState(() {
-                _selectedPreviewIndex = index;
-              });
-            },
-            child: Container(
+          
+          if (hasImage) {
+            // Show actual generated image
+            return GestureDetector(
+              onTap: () {
+                setState(() {
+                  _selectedPreviewIndex = index;
+                });
+              },
+              child: Container(
+                width: 72,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: isSelected ? const Color(0xFF2667FF) : Colors.transparent,
+                    width: 2,
+                  ),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: PrivateImage(
+                    storagePath: _generatedPaths[index],
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+            );
+          } else {
+            // Show placeholder for pending variant
+            return Container(
               width: 72,
               decoration: BoxDecoration(
+                color: Colors.grey.shade100,
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(
-                  color:
-                      isSelected ? const Color(0xFF2667FF) : Colors.transparent,
+                  color: Colors.grey.shade200,
                   width: 2,
                 ),
               ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: PrivateImage(
-                  storagePath: _generatedPaths[index],
-                  fit: BoxFit.cover,
-                ),
+              child: Center(
+                child: _isGenerating && index == _generatedPaths.length
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Color(0xFF2667FF),
+                        ),
+                      )
+                    : Icon(
+                        Icons.image_outlined,
+                        color: Colors.grey.shade400,
+                        size: 28,
+                      ),
               ),
-            ),
-          );
+            );
+          }
         },
       ),
     );
   }
 
-  Widget _buildLocationDisplay() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.location_on_outlined,
-              color: Colors.black54, size: 20),
-          const SizedBox(width: 10),
-          Expanded(
-            child: TextField(
-              controller: _placeController,
-              style: const TextStyle(color: Colors.black87, fontSize: 14),
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                hintText: 'Place',
-                hintStyle: TextStyle(color: Colors.black38, fontSize: 14),
-                isDense: true,
-                contentPadding: EdgeInsets.zero,
-              ),
+  Widget _buildSceneSelector() {
+    final selectedScene = _scenes.firstWhere(
+      (s) => s['id'] == _selectedSceneId,
+      orElse: () => _scenes.first,
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(left: 4, bottom: 8),
+          child: Text(
+            'Scene',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.black54,
             ),
           ),
-        ],
+        ),
+        GestureDetector(
+          onTap: _showScenePicker,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.03),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Text(
+                  selectedScene['icon']!,
+                  style: const TextStyle(fontSize: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    selectedScene['label']!,
+                    style: const TextStyle(
+                      color: Colors.black87,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                const Icon(
+                  Icons.keyboard_arrow_down,
+                  color: Colors.black45,
+                  size: 22,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showScenePicker() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          children: [
+            // Handle bar
+            Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            // Title
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+              child: Row(
+                children: [
+                  const Text(
+                    'Choose Scene',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Done'),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            // Scene list grouped by category
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                children: _buildGroupedScenes(),
+              ),
+            ),
+          ],
+        ),
       ),
     );
+  }
+
+  List<Widget> _buildGroupedScenes() {
+    final categories = <String, List<Map<String, String>>>{};
+    
+    // Group scenes by category
+    for (final scene in _scenes) {
+      final category = scene['category'] ?? 'Other';
+      categories.putIfAbsent(category, () => []);
+      categories[category]!.add(scene);
+    }
+
+    final widgets = <Widget>[];
+    final categoryOrder = ['Popular', 'Nature', 'Urban', 'Landmarks', 'Activities', 'Indoor', 'Seasonal', 'Creative'];
+
+    for (final categoryName in categoryOrder) {
+      if (!categories.containsKey(categoryName)) continue;
+      
+      final scenes = categories[categoryName]!;
+      
+      // Category header
+      widgets.add(
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+          child: Text(
+            categoryName,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey.shade600,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ),
+      );
+
+      // Scene items in this category
+      for (final scene in scenes) {
+        final isSelected = scene['id'] == _selectedSceneId;
+        widgets.add(
+          ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+            leading: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: isSelected ? const Color(0xFF2667FF).withOpacity(0.1) : Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Center(
+                child: Text(
+                  scene['icon']!,
+                  style: const TextStyle(fontSize: 22),
+                ),
+              ),
+            ),
+            title: Text(
+              scene['label']!,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                color: isSelected ? const Color(0xFF2667FF) : Colors.black87,
+              ),
+            ),
+            trailing: isSelected
+                ? const Icon(Icons.check_circle, color: Color(0xFF2667FF), size: 22)
+                : null,
+            onTap: () {
+              setState(() => _selectedSceneId = scene['id']!);
+              Navigator.pop(context);
+            },
+          ),
+        );
+      }
+    }
+
+    return widgets;
   }
 
   Widget _buildOptionsRow() {

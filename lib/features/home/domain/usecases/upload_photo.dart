@@ -8,7 +8,7 @@ class UploadPhoto {
 
   UploadPhoto(this.repository);
 
-  Future<Either<Failure, void>> call(File image, {String? place, String? shotType, String? timeOfDay}) async {
-    return await repository.uploadPhoto(image, place: place, shotType: shotType, timeOfDay: timeOfDay);
+  Future<Either<Failure, void>> call(File image, {String? sceneType, String? shotType, String? timeOfDay}) async {
+    return await repository.uploadPhoto(image, sceneType: sceneType, shotType: shotType, timeOfDay: timeOfDay);
   }
 }

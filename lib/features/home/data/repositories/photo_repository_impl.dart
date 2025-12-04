@@ -16,12 +16,12 @@ class PhotoRepositoryImpl implements PhotoRepository {
   });
 
   @override
-  Future<Either<Failure, void>> uploadPhoto(File image, {String? place, String? shotType, String? timeOfDay}) async {
+  Future<Either<Failure, void>> uploadPhoto(File image, {String? sceneType, String? shotType, String? timeOfDay}) async {
     try {
       final userId = firebaseAuth.currentUser?.uid;
       if (userId == null) return Left(ServerFailure()); // Should be logged in
       
-      await remoteDataSource.uploadPhoto(image, userId, place: place, shotType: shotType, timeOfDay: timeOfDay);
+      await remoteDataSource.uploadPhoto(image, userId, sceneType: sceneType, shotType: shotType, timeOfDay: timeOfDay);
       return const Right(null);
     } catch (e) {
       return Left(ServerFailure());
